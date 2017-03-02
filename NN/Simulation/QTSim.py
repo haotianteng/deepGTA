@@ -37,6 +37,16 @@ def GenPhenotype(n_sample = 5000, n_SNP = 1000, n_effectSNP = 100, hsq = 0.6, f 
     y = (y - np.mean(y))/np.std(y)    
     return x, y,indx
 
+class dummy_data_config(object):
+    """Dummy data configuration"""
+    individual_n = 5000
+    SNP_n = 1000
+
+def run_sim(config,keep_record = None):
+    
+
+
+assert SNP.shape[1]==self._SNP_n,"SNP number is not correct,expect SNP number %d, recieve %d"%(self._SNP_n,SNP.shape[1])
 ### Parameter setting
 n1 = 5000 #Sample number
 n2 = 3000
