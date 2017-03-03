@@ -1,0 +1,5 @@
+model_checkpoint_path: "/Users/haotian.teng/Documents/deepGTA/NN/logs/model.ckpt-3999"
+all_model_checkpoint_paths: "/Users/haotian.teng/Documents/deepGTA/NN/logs/model.ckpt-999"
+all_model_checkpoint_paths: "/Users/haotian.teng/Documents/deepGTA/NN/logs/model.ckpt-1999"
+all_model_checkpoint_paths: "/Users/haotian.teng/Documents/deepGTA/NN/logs/model.ckpt-2999"
+all_model_checkpoint_paths: "/Users/haotian.teng/Documents/deepGTA/NN/logs/model.ckpt-3999"

@@ -11,6 +11,8 @@ from __future__ import print_function
 
 import numpy as np
 import collections
+import sys
+sys.path.append("/Users/haotian.teng/Documents/deepGTA/NN/Simulation")
 import QTSim
 DATA_DIR = ""
 TRAIN_SNP = "train_geno.dat"
@@ -51,10 +53,12 @@ class DataSet(object):
                  SNP,
                  trait,
                  dummy_data = False,
+                 config = None #dummy data configuration
                  ):
         """Custruct a DataSet."""
         if dummy_data:
-            config = QTSim.dummy_data_config
+            if config is None:
+                raise NameError('Configuration for dummy_data missing!')
             self._individual_n = config.individual_n
             self._SNP_n = config.SNP_n
             self._SNP,self._trait = QTSim.run_sim(config)
@@ -92,8 +96,8 @@ class DataSet(object):
         if self._epochs_completed == 0 and start == 0 and shuffle:
           perm0 = np.arange(self._individual_n)
           np.random.shuffle(perm0)
-          self._SNP = self.images[perm0]
-          self._trait = self.labels[perm0]
+          self._SNP = self.SNP[perm0]
+          self._trait = self.trait[perm0]
         # Go to the next epoch
         if start + batch_size > self._individual_n:
           # Finished epoch
@@ -106,8 +110,8 @@ class DataSet(object):
           if shuffle:
             perm = np.arange(self._individual_n)
             np.random.shuffle(perm)
-            self._SNP = self.images[perm]
-            self._trait = self.labels[perm]
+            self._SNP = self.SNP[perm]
+            self._trait = self.trait[perm]
           # Start next epoch
           start = 0
           self._index_in_epoch = batch_size - rest_individual_n
@@ -126,16 +130,15 @@ def read_data_sets(train_dir,
                    dummy_data = False
                    ):
     if dummy_data:
-        def fake():
-            return DataSet([],[],dummy_data = True)
-        
-        train = fake()
-        
+        config = QTSim.make_config()
+        def fake(config):
+            return DataSet([],[],dummy_data = True,config = config)
+        train = fake(config)
         #Set the sample size to validation_size
-        QTSim.dummy_data.config.individual_n = validation_size
-        validation = fake()
-        
-        return Datasets(train = train,validation = validation)
+        config.individual_n = validation_size
+        validation = fake(config)
+        test = fake(config)
+        return Datasets(train = train,validation = validation,test = test)
     with open(TRAIN_SNP,'r') as f:
         train_SNP = extract_SNP(f)
     with open(TRAIN_TRAIT,'r') as f:

@@ -40,6 +40,7 @@ def loss(trait_predict,trait,l1_coeff):
     #Get the weight
     with tf.variable_scope("FNN",reuse = True):
         w1 = tf.get_variable("w1")
+        tf.summary.histogram('w1',w1)
     #Calculate the loss with 1st Norm Regularization of weight
     loss = tf.reduce_mean(tf.square(trait_predict-trait)) + l1_coeff*tf.reduce_sum(tf.abs(w1))
     return loss
@@ -47,6 +48,8 @@ def training(loss,learning_rate):
     """Training the model:
         Args:
             loss:loss from the loss()
+        Returns:
+            train:tensorflow operation for training
     """
     
     
@@ -59,6 +62,10 @@ def evaluation(trait_predict,trait):
         Args:
             trait_predict: Predicted trait value from inference()
             trait: True trait value
+        Returns:
+            eva_loss:Tensorflow tensor record the loss.
+            total_error:Tensor record the total variation in the quantitive trait.
+            unedplained_error: Tensor record the Unexplained variation.
     """
     eva_loss = tf.reduce_mean(tf.square(trait_predict-trait))
     total_error = tf.reduce_sum(tf.square(trait-tf.reduce_mean(trait)))
