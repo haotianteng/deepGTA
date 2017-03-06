@@ -10,13 +10,49 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-import argparse,sys,time,os
+import time,os
 
 import deepGTA_input
 import deepGTA
 
+SNP_n = deepGTA_input.SNP_n
+
+FLAGS = tf.app.flags.FLAGS
+
+tf.app.flags.DEFINE_integer(
+      'max_steps',
+      default_value=100000,
+      docstring='Number of steps to run trainer.'
+  )
+tf.app.flags.DEFINE_float(
+      'l1_norm',
+      default_value=0,
+      docstring='l1 regularization strength in loss function'
+  )
+tf.app.flags.DEFINE_string(
+      'input_data_dir',
+      default_value='/Users/haotian.teng/Documents/deepGTA/NN/Simulation/data/',
+      docstring='Directory to put the input data.'
+  )
+tf.app.flags.DEFINE_string(
+      'log_dir',
+      default_value='/Users/haotian.teng/Documents/deepGTA/NN/logs/',
+      docstring='Directory to put the log data.'
+  )
+tf.app.flags.DEFINE_boolean(
+      'dummy_data',
+      default_value=False,
+      docstring='If true, uses fake data for unit testing.'
+  )
+tf.app.flags.DEFINE_string(
+      'record_file',
+      default_value='/Users/haotian.teng/Documents/deepGTA/NN/Test/R_squared_record_1.txt',
+      docstring='Record file name to store the R_square score',
+  )
+
+
 def placeholder_input(batch_size):
-    SNP  = tf.placeholder(dtype = tf.float32,name = 'x',shape = [batch_size,deepGTA.SNP_n])
+    SNP  = tf.placeholder(dtype = tf.float32,name = 'x',shape = [batch_size,SNP_n])
     trait = tf.placeholder(dtype = tf.float32,name = 'y',shape = [batch_size,1])
     return SNP,trait
 
@@ -70,6 +106,8 @@ def run_training():
    data_sets = deepGTA_input.read_data_sets(FLAGS.input_data_dir, dummy_data = FLAGS.dummy_data)
     
    with tf.Graph().as_default():
+    global_step = tf.Variable(0, trainable=False)   
+       
     #placeholder for input data
     SNP_placeholder,trait_placeholder = placeholder_input(FLAGS.batch_size)
     
@@ -80,7 +118,7 @@ def run_training():
     loss = deepGTA.loss(trait_predict,trait_placeholder,FLAGS.l1_norm)
     
     #Add training op into graph
-    train_step = deepGTA.training(loss,FLAGS.learning_rate)
+    train_step = deepGTA.training(loss,global_step)
     
     #Add Op to compare the predict trait with real trait and compute R2
     eval_loss,total_error,unexplained_error = deepGTA.evaluation(trait_predict,trait_placeholder)
@@ -92,7 +130,7 @@ def run_training():
     init = tf.global_variables_initializer()
     
     #Create a savor for saving the model
-    saver = tf.train.Saver()
+    saver = tf.train.Saver(tf.global_variables())
     
     #Running
     sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
@@ -143,66 +181,13 @@ def run_training():
     return R_squared_train,R_squared_validation,R_squared_test
         
 def main(_):
+    print(FLAGS.dummy_data)
     R1,R2,R3 = run_training()
     R = [R1,R2,R3]
     with open(FLAGS.record_file,'w+') as f:
         f.write(','.join(str(r) for r in R)+'\n')
     
 if __name__ == '__main__':
-  parser = argparse.ArgumentParser()
-  parser.add_argument(
-      '--learning_rate',
-      type=float,
-      default=0.001,
-      help='Initial learning rate.'
-  )
-  parser.add_argument(
-      '--max_steps',
-      type=int,
-      default=10000,
-      help='Number of steps to run trainer.'
-  )
-  parser.add_argument(
-      '--batch_size',
-      type=int,
-      default=500,
-      help='Batch size.  Must divide evenly into the dataset sizes.'
-  )
-  parser.add_argument(
-      '--l1_norm',
-      type=int,
-      default=0.01,
-      help='l1 regularization strength in loss function'
-  )
-  parser.add_argument(
-      '--input_data_dir',
-      type=str,
-      default='/Users/haotian.teng/Documents/deepGTA/NN/Simulation/data/',
-      help='Directory to put the input data.'
-  )
-  parser.add_argument(
-      '--log_dir',
-      type=str,
-      default='/Users/haotian.teng/Documents/deepGTA/NN/logs/',
-      help='Directory to put the log data.'
-  )
-  parser.add_argument(
-      '--dummy_data',
-      default=False,
-      help='If true, uses fake data for unit testing.',
-      action='store_true'
-  )
-  parser.add_argument(
-      '--record_file',
-      type = str,
-      default='/Users/haotian.teng/Documents/deepGTA/NN/Test/R_squared_record_1.txt',
-      help='Record file name to store the R_square score',
-  )
-  
-  
-  
-
-  FLAGS, unparsed = parser.parse_known_args()
-  tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
+  tf.app.run()
     #FLAG_DICT = {input_data_dir,dummy_data,batch_size,learning_rate,l1_norm,max_step}
     

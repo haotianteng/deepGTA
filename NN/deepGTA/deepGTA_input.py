@@ -19,7 +19,11 @@ TRAIN_SNP = "train_geno.dat"
 TRAIN_TRAIT = "train_pheno.dat"
 
 Datasets = collections.namedtuple('Datasets', ['train', 'validation', 'test'])
-    
+SNP_n = 1000
+
+NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 4000
+NUM_EXAMPLES_PER_EPOCH_FOR_VALIDATION = 1000
+NUM_EXAMPLES_FOR_TEST = 1000  
 def extract_SNP(f):
     """Extract the SNP into a 2D numpy array [individual_n, SNP_n]
     Args:
@@ -126,17 +130,18 @@ class DataSet(object):
             
         
 def read_data_sets(train_dir,
-                   validation_size = 1000,
                    dummy_data = False
                    ):
+    validation_size = NUM_EXAMPLES_PER_EPOCH_FOR_VALIDATION
     if dummy_data:
-        config = QTSim.make_config()
+        config = QTSim.make_config(sample_size = NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN)
         def fake(config):
             return DataSet([],[],dummy_data = True,config = config)
         train = fake(config)
         #Set the sample size to validation_size
-        config.individual_n = validation_size
+        config.individual_n = NUM_EXAMPLES_PER_EPOCH_FOR_VALIDATION
         validation = fake(config)
+        config.individual_n = NUM_EXAMPLES_FOR_TEST
         test = fake(config)
         return Datasets(train = train,validation = validation,test = test)
     with open(TRAIN_SNP,'r') as f:
