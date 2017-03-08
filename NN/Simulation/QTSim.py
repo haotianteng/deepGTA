@@ -59,7 +59,7 @@ class dummy_data_config(object):
     effect_size = None
     index = None
 
-def run_sim(config,keep_record_in = None):
+def run_sim(config,keep_record_in = "/Users/haotian.teng/Documents/deepGTA/NN/Simulation/data"):
     m = config.SNP_n
     mq = config.effectSNP_n
     n = config.individual_n
@@ -76,18 +76,18 @@ def run_sim(config,keep_record_in = None):
     trait = np.asarray(trait)
     if keep_record_in is not None:
      #Record SNP data
-     with open(keep_record_in + 'train_SNP.dat','w+') as f:
+     with open(keep_record_in + '/train_SNP.dat','w+') as f:
       for i in range(n):
           f.write(','.join(str(x) for x in SNP[i,:])+'\n')
       f.close()
       
      #Record trait data
-     with open(keep_record_in + 'train_trait.dat','w+') as f:
+     with open(keep_record_in + '/train_trait.dat','w+') as f:
       f.write(','.join(str(x) for x in trait))
       f.close()
       
      #Record the index of effect SNP and the effect size
-     with open(keep_record_in + 'effect_index.dat','w+') as f:
+     with open(keep_record_in + '/effect_index.dat','w+') as f:
       f.write('#Index\n')
       f.write(','.join(str(x) for x in indx)+'\n')
       f.write('#Effect_size\n')

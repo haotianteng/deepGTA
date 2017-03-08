@@ -21,14 +21,10 @@ FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_integer(
       'max_steps',
-      default_value=100000,
+      default_value=10000,
       docstring='Number of steps to run trainer.'
   )
-tf.app.flags.DEFINE_float(
-      'l1_norm',
-      default_value=0,
-      docstring='l1 regularization strength in loss function'
-  )
+
 tf.app.flags.DEFINE_string(
       'input_data_dir',
       default_value='/Users/haotian.teng/Documents/deepGTA/NN/Simulation/data/',
@@ -49,7 +45,6 @@ tf.app.flags.DEFINE_string(
       default_value='/Users/haotian.teng/Documents/deepGTA/NN/Test/R_squared_record_1.txt',
       docstring='Record file name to store the R_square score',
   )
-
 
 def placeholder_input(batch_size):
     SNP  = tf.placeholder(dtype = tf.float32,name = 'x',shape = [batch_size,SNP_n])
@@ -115,7 +110,7 @@ def run_training():
     trait_predict = deepGTA.inference(SNP_placeholder)
     
     #Add loss op into the graph
-    loss = deepGTA.loss(trait_predict,trait_placeholder,FLAGS.l1_norm)
+    loss = deepGTA.loss(trait_predict,trait_placeholder)
     
     #Add training op into graph
     train_step = deepGTA.training(loss,global_step)
@@ -142,11 +137,10 @@ def run_training():
     for i in range(FLAGS.max_steps):
         start_time = time.time()
         feed_dict = fill_feed_dict(data_sets.train,SNP_placeholder,trait_placeholder)
-        _,loss_val = sess.run([train_step,eval_loss],feed_dict = feed_dict)
-        duration = time.time() - start_time
-                            
+        _,loss_val,eval_loss_val = sess.run([train_step,loss,eval_loss],feed_dict = feed_dict)     
+        duration = time.time() - start_time              
         if i%100==0:
-            print('Step %d: loss = %.2f (%.3f sec)' % (i, loss_val, duration))
+            print('Step %d: total_loss = %.2f  loss = %.2f (%.3f sec)' % (i, loss_val,eval_loss_val, duration))
             # Update the summary file.
             summary_str = sess.run(summary, feed_dict=feed_dict)
             summary_writer.add_summary(summary_str, i)
@@ -178,10 +172,10 @@ def run_training():
                     SNP_placeholder,
                     trait_placeholder,
                     data_sets.test)
+        
     return R_squared_train,R_squared_validation,R_squared_test
         
 def main(_):
-    print(FLAGS.dummy_data)
     R1,R2,R3 = run_training()
     R = [R1,R2,R3]
     with open(FLAGS.record_file,'w+') as f:
