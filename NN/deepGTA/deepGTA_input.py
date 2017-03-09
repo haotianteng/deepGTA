@@ -21,7 +21,7 @@ TRAIN_TRAIT = "train_pheno.dat"
 Datasets = collections.namedtuple('Datasets', ['train', 'validation', 'test'])
 SNP_n = 1000
 
-NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 5000
+NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 50000
 NUM_EXAMPLES_PER_EPOCH_FOR_VALIDATION = 1000
 NUM_EXAMPLES_FOR_TEST = 1000
 def extract_SNP(f):

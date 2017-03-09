@@ -20,11 +20,11 @@ def load_model(save_file,step_index):
     
     #Build the graph to predict the trait
     deepGTA.inference(SNP_placeholder)
-    ckpt = tf.train.import_meta_graph(file_path+'.meta')
+    ckpt = tf.train.Saver()
     return ckpt
 
 step_index = 9999
-file_path = "/Users/haotian.teng/Documents/deepGTA/NN/logs/model.ckpt"
+file_path = "/Users/haotian.teng/Documents/deepGTA/NN/logs/model/model.ckpt"
 ckpt = load_model(file_path,step_index)
 sess = tf.Session()
 with tf.variable_scope("hidden1",reuse = True):
@@ -36,8 +36,6 @@ with tf.variable_scope("hidden2",reuse = True):
 with tf.variable_scope("softmax_linear",reuse = True):
     w = tf.get_variable("weights")
     b = tf.get_variable("bias")
-init = tf.global_variables_initializer()
-sess.run(init)
 ckpt.restore(sess,file_path+'-'+str(step_index))
 w1_value = sess.run(w1)
 w2_value = sess.run(w2)

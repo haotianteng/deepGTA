@@ -24,7 +24,7 @@ tf.app.flags.DEFINE_float(
   )
 tf.app.flags.DEFINE_float(
       'weight_decay',
-      default_value=0.0005,
+      default_value=0.001,
       docstring='Weight decay strength of the regularization term'
   )
 

@@ -46,6 +46,7 @@ tf.app.flags.DEFINE_string(
       docstring='Record file name to store the R_square score',
   )
 
+
 def placeholder_input(batch_size):
     SNP  = tf.placeholder(dtype = tf.float32,name = 'x',shape = [batch_size,SNP_n])
     trait = tf.placeholder(dtype = tf.float32,name = 'y',shape = [batch_size,1])
@@ -132,12 +133,14 @@ def run_training():
     sess.run(init)
     
     # Instantiate a SummaryWriter to output summaries and the Graph.
-    summary_writer = tf.summary.FileWriter(FLAGS.log_dir, sess.graph)
+    if not os.path.exists(FLAGS.log_dir+'/summary'):
+        os.makedirs(FLAGS.log_dir+'/summary')
+    summary_writer = tf.summary.FileWriter(FLAGS.log_dir+'/summary', sess.graph)
     
     for i in range(FLAGS.max_steps):
         start_time = time.time()
         feed_dict = fill_feed_dict(data_sets.train,SNP_placeholder,trait_placeholder)
-        _,loss_val,eval_loss_val = sess.run([train_step,loss,eval_loss],feed_dict = feed_dict)     
+        _,loss_val,eval_loss_val = sess.run([train_step,loss,eval_loss],feed_dict = feed_dict)
         duration = time.time() - start_time              
         if i%100==0:
             print('Step %d: total_loss = %.2f  loss = %.2f (%.3f sec)' % (i, loss_val,eval_loss_val, duration))
@@ -146,7 +149,9 @@ def run_training():
             summary_writer.add_summary(summary_str, i)
             summary_writer.flush()
         if (i + 1) % 1000 == 0 or (i + 1) == FLAGS.max_steps:
-            checkpoint_file = os.path.join(FLAGS.log_dir, 'model.ckpt')
+            if not os.path.exists(FLAGS.log_dir+'/model'):
+                os.makedirs(FLAGS.log_dir+'/model')
+            checkpoint_file = os.path.join(FLAGS.log_dir+'/model', 'model.ckpt')
             saver.save(sess, checkpoint_file, global_step=i)
             # Evaluate against the training set.
             print('Training Data Eval:')
@@ -178,6 +183,8 @@ def run_training():
 def main(_):
     R1,R2,R3 = run_training()
     R = [R1,R2,R3]
+    if not os.path.exists(FLAGS.record_file):
+        os.makedirs(FLAGS.record_file)
     with open(FLAGS.record_file,'w+') as f:
         f.write(','.join(str(r) for r in R)+'\n')
     

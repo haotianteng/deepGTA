@@ -4,9 +4,14 @@ Spyder Editor
 
 This is a temporary script file.
 """
-import numpy as np, statistics as sta
-import math
-
+import numpy as np, statistics as sta,tensorflow as tf
+import math,os
+FLAGS = tf.app.flags.FLAGS
+tf.app.flags.DEFINE_string(
+      'sim_record_dir',
+      default_value=None,
+      docstring='Record file name to store the simulation data',
+  )
 def GenPhenotype(n_sample = 5000, n_SNP = 1000, n_effectSNP = 100, hsq = 0.6, f = 0.5, effect_size = 0.1,indx = None):
     if type(f) is float:
         f = [f]
@@ -59,7 +64,8 @@ class dummy_data_config(object):
     effect_size = None
     index = None
 
-def run_sim(config,keep_record_in = "/Users/haotian.teng/Documents/deepGTA/NN/Simulation/data"):
+def run_sim(config,keep_record_in = FLAGS.sim_record_dir):
+    
     m = config.SNP_n
     mq = config.effectSNP_n
     n = config.individual_n
@@ -75,6 +81,8 @@ def run_sim(config,keep_record_in = "/Users/haotian.teng/Documents/deepGTA/NN/Si
     trait = [[x] for x in trait]
     trait = np.asarray(trait)
     if keep_record_in is not None:
+     if not os.path.exists(keep_record_in):
+         os.makedirs(keep_record_in)
      #Record SNP data
      with open(keep_record_in + '/train_SNP.dat','w+') as f:
       for i in range(n):
