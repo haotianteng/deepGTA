@@ -9,7 +9,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import numpy as np
+import numpy as np, tensorflow as tf,plink_reader as reader
 import collections
 import sys
 sys.path.append("/Users/haotian.teng/Documents/deepGTA/NN/Simulation")
@@ -18,39 +18,20 @@ DATA_DIR = ""
 TRAIN_SNP = "train_geno.dat"
 TRAIN_TRAIT = "train_pheno.dat"
 
+FLAGS = tf.app.flags.FLAGS
+tf.app.flags.DEFINE_boolean(
+      'jitter',
+      default_value=False,
+      docstring='If true, add noise to the training data.'
+  )
+
 Datasets = collections.namedtuple('Datasets', ['train', 'validation', 'test'])
 SNP_n = 1000
 
-NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 50000
+NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 5000
 NUM_EXAMPLES_PER_EPOCH_FOR_VALIDATION = 1000
 NUM_EXAMPLES_FOR_TEST = 1000
-def extract_SNP(f):
-    """Extract the SNP into a 2D numpy array [individual_n, SNP_n]
-    Args:
-        f: SNP file handle
-    Returns:
-        SNP_data: numpy SNP array
-        
-    """
-    SNP_data = list()
-    for line in f:
-        SNP_data.append([float(x) for x in line.split(',')])
-    SNP_data = np.asarray(SNP_data)
-    return SNP_data
 
-def extract_trait(f):
-    """Extract the trait into a 1D numpy array [individual_n]
-    Args:
-        f: SNP file handle
-    Returns:
-        trait_data: numpy triat array to address the phenotype
-        
-    """
-    trait_data = list()
-    for line in f:
-        trait_data.append([float(x) for x in line.split(',')])
-    trait_data = np.asarray([[x] for x in trait_data[0]])
-    return trait_data
 
 class DataSet(object):
     def __init__(self,
@@ -108,8 +89,8 @@ class DataSet(object):
           self._epochs_completed += 1
           # Get the rest samples in this epoch
           rest_individual_n = self._individual_n - start
-          images_rest_part = self._SNP[start:self._individual_n]
-          labels_rest_part = self._trait[start:self._individual_n]
+          SNP_rest_part = self._SNP[start:self._individual_n]
+          trait_rest_part = self._trait[start:self._individual_n]
           # Shuffle the data
           if shuffle:
             perm = np.arange(self._individual_n)
@@ -120,13 +101,22 @@ class DataSet(object):
           start = 0
           self._index_in_epoch = batch_size - rest_individual_n
           end = self._index_in_epoch
-          images_new_part = self._SNP[start:end]
-          labels_new_part = self._trait[start:end]
-          return np.concatenate((images_rest_part, images_new_part), axis=0) , np.concatenate((labels_rest_part, labels_new_part), axis=0)
+          SNP_new_part = self._SNP[start:end]
+          trait_new_part = self._trait[start:end]
+          SNP_batch = np.concatenate((SNP_rest_part, SNP_new_part), axis=0)
+          trait_batch = np.concatenate((trait_rest_part, trait_new_part), axis=0)
         else:
           self._index_in_epoch += batch_size
           end = self._index_in_epoch
-          return self._SNP[start:end], self._trait[start:end]
+          SNP_batch = self._SNP[start:end]
+          trait_batch = self._trait[start:end]
+        if FLAGS.jitter:
+            std = np.std(self._trait)
+            trait_size = len(trait_batch)
+            noise = np.random.normal(0,std/2,trait_size)
+            noise = [[x] for x in noise]
+            trait_batch = trait_batch + noise
+        return SNP_batch,trait_batch
             
         
 def read_data_sets(train_dir,

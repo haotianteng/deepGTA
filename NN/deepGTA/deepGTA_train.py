@@ -148,7 +148,7 @@ def run_training():
             summary_str = sess.run(summary, feed_dict=feed_dict)
             summary_writer.add_summary(summary_str, i)
             summary_writer.flush()
-        if (i + 1) % 1000 == 0 or (i + 1) == FLAGS.max_steps:
+        if (i + 1) % 100 == 0 or (i + 1) == FLAGS.max_steps:
             if not os.path.exists(FLAGS.log_dir+'/model'):
                 os.makedirs(FLAGS.log_dir+'/model')
             checkpoint_file = os.path.join(FLAGS.log_dir+'/model', 'model.ckpt')
