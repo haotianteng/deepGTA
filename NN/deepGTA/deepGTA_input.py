@@ -9,19 +9,20 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import numpy as np, tensorflow as tf,plink_reader as reader
+import numpy as np, tensorflow as tf
 import collections
 import sys
+from plink_reader import extract_trait,extract_SNP
 sys.path.append("/Users/haotian.teng/Documents/deepGTA/NN/Simulation")
 import QTSim
-DATA_DIR = ""
-TRAIN_SNP = "train_geno.dat"
-TRAIN_TRAIT = "train_pheno.dat"
+TRAIN_SNP = "/Users/haotian.teng/Documents/deepGTA/data/aric_hapmap3_m01_geno"
+TRAIN_TRAIT ="/Users/haotian.teng/Documents/deepGTA/data/aric_outlier_117_u8682.txt"
+TRAIT_NAME = "anta01"
 
 FLAGS = tf.app.flags.FLAGS
-tf.app.flags.DEFINE_boolean(
+tf.app.flags.DEFINE_float(
       'jitter',
-      default_value=False,
+      default_value=None,
       docstring='If true, add noise to the training data.'
   )
 
@@ -48,9 +49,11 @@ class DataSet(object):
             self._SNP_n = config.SNP_n
             self._SNP,self._trait = QTSim.run_sim(config)
         else:
-            assert SNP.shape[0]==trait[0],"Individual number of SNP and trait should be same, SNP:%d , trait:%d"%(SNP.shape[0],trait[0])
+            assert SNP.shape[0]==trait.shape[0],"Individual number of SNP and trait should be same, SNP:%d , trait:%d"%(SNP.shape[0],trait.shape[0])
             self._SNP = SNP
             self._trait = trait
+            self._individual_n = trait.shape[0]
+            self._SNP_n = SNP.shape[1]
         self._epochs_completed = 0
         self._index_in_epoch = 0
         
@@ -110,10 +113,10 @@ class DataSet(object):
           end = self._index_in_epoch
           SNP_batch = self._SNP[start:end]
           trait_batch = self._trait[start:end]
-        if FLAGS.jitter:
+        if FLAGS.jitter is not None:
             std = np.std(self._trait)
             trait_size = len(trait_batch)
-            noise = np.random.normal(0,std/2,trait_size)
+            noise = np.random.normal(0,std*FLAGS.jitter,trait_size)
             noise = [[x] for x in noise]
             trait_batch = trait_batch + noise
         return SNP_batch,trait_batch
@@ -134,10 +137,8 @@ def read_data_sets(train_dir,
         config.individual_n = NUM_EXAMPLES_FOR_TEST
         test = fake(config)
         return Datasets(train = train,validation = validation,test = test)
-    with open(TRAIN_SNP,'r') as f:
-        train_SNP = extract_SNP(f)
-    with open(TRAIN_TRAIT,'r') as f:
-        train_trait = extract_trait(f)
+    train_SNP = extract_SNP(TRAIN_SNP)
+    train_trait = extract_trait(TRAIN_TRAIT,TRAIT_NAME)
         
     #Seperate the dataset by validation size
     validation_SNP = train_SNP[:validation_size]
@@ -148,4 +149,4 @@ def read_data_sets(train_dir,
     #Construct data set class
     train = DataSet(train_SNP,train_trait,dummy_data = dummy_data)
     validation = DataSet(validation_SNP,validation_trait,dummy_data = dummy_data)
-    return Datasets(train = train,validation = validation)
+    return Datasets(train = train,validation = validation,test = validation)
