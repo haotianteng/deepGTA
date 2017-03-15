@@ -10,12 +10,11 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np, tensorflow as tf
-import collections
-import sys
+import collections,sys
 from plink_reader import extract_trait,extract_SNP
 sys.path.append("/Users/haotian.teng/Documents/deepGTA/NN/Simulation")
 import QTSim
-TRAIN_SNP = "/Users/haotian.teng/Documents/deepGTA/data/aric_hapmap3_m01_geno"
+TRAIN_SNP = "/Users/haotian.teng/Documents/deepGTA/data/aric_hapmap3_m01_geno_ch22"
 TRAIN_TRAIT ="/Users/haotian.teng/Documents/deepGTA/data/aric_outlier_117_u8682.txt"
 TRAIT_NAME = "anta01"
 
@@ -27,7 +26,7 @@ tf.app.flags.DEFINE_float(
   )
 
 Datasets = collections.namedtuple('Datasets', ['train', 'validation', 'test'])
-SNP_n = 1000
+SNP_n = 10000
 
 NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 5000
 NUM_EXAMPLES_PER_EPOCH_FOR_VALIDATION = 1000
@@ -139,7 +138,16 @@ def read_data_sets(train_dir,
         return Datasets(train = train,validation = validation,test = test)
     train_SNP = extract_SNP(TRAIN_SNP)
     train_trait = extract_trait(TRAIN_TRAIT,TRAIT_NAME)
-        
+    exclude_list = np.empty(0)
+    for ind_index,current_trait in enumerate(train_trait):
+        if np.isnan(current_trait[0]):
+            exclude_list = np.append(exclude_list,ind_index)
+    for ind_index,current_SNP in enumerate(train_SNP):
+        if np.isnan(np.sum(current_SNP)):
+            exclude_list = np.append(exclude_list,ind_index)
+    train_SNP = train_SNP[~np.in1d(range(len(train_trait)),exclude_list)]
+    train_trait = train_trait[~np.in1d(range(len(train_trait)),exclude_list)]
+    train_trait = (train_trait - np.mean(train_trait))/np.std(train_trait)
     #Seperate the dataset by validation size
     validation_SNP = train_SNP[:validation_size]
     validation_trait = train_trait[:validation_size]

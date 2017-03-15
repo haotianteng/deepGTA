@@ -32,8 +32,8 @@ def extract_SNP(file_path,chrom_list = None):
     with open(fam_file_path,'r') as fam_f:
         for line in fam_f:
             sample_size +=1
-    print("sample size = %d"%(sample_size))
-    print("SNP number = %d"%(SNP_n))
+    print("Data sample size = %d"%(sample_size))
+    print("Data SNP number = %d"%(SNP_n))
     SNP_index_list = None
     if chrom_list is not None:
         SNP_index_list = [i for i, x in enumerate(chrom_record) if x in chrom_list]
@@ -43,7 +43,7 @@ def extract_SNP(file_path,chrom_list = None):
     magic_num = [format(x,'b') for x in magic_num]
     if not (magic_num[0] == "1101100") & (magic_num[1] == "11011") & (magic_num[2] == "1"):
         print ("File format does not support, magic number is not correct.")
-    for SNP_index in range(min(1000,SNP_n)):
+    for SNP_index in range(min(10000,SNP_n)):
         if (SNP_index_list is None) or (SNP_index in SNP_index_list):
             SNP = np.empty(0)
             block = os.read(bed_f,block_size)

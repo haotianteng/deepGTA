@@ -24,7 +24,7 @@ tf.app.flags.DEFINE_float(
   )
 tf.app.flags.DEFINE_float(
       'weight_decay',
-      default_value=0.0,
+      default_value=0.001,
       docstring='Weight decay strength of the regularization term'
   )
 
@@ -62,8 +62,8 @@ def inference(SNP):
     Returns:
         trait_predict: Predicted Trait, 1D tensor of [batch_size]
     """
-    hidden1_units = 200
-    hidden2_units = 10   
+    hidden1_units = 400
+    hidden2_units = 100   
     with tf.variable_scope("hidden1"):
         #First Layer variable
         w = tf.get_variable("weights",shape = [SNP_n,hidden1_units],dtype = tf.float32, initializer = tf.truncated_normal_initializer( stddev = 0.04))
