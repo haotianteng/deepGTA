@@ -24,14 +24,18 @@ tf.app.flags.DEFINE_float(
   )
 tf.app.flags.DEFINE_float(
       'weight_decay',
-      default_value=0.001,
+      default_value=0.0001,
       docstring='Weight decay strength of the regularization term'
   )
-
+tf.app.flags.DEFINE_string(
+       'decay_method',
+       default_value = 'l1',
+       docstring = 'Method used to calculate regularization of the weight, typically l1,l2.'
+       )
 NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = deepGTA_input.NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN
 NUM_EXAMPLES_PER_EPOCH_FOR_VALIDATION = deepGTA_input.NUM_EXAMPLES_PER_EPOCH_FOR_VALIDATION
 NUM_EXAMPLES_FOR_TEST = deepGTA_input.NUM_EXAMPLES_FOR_TEST
-SNP_n = deepGTA_input.SNP_n
+SNP_n = deepGTA_input.extract_SNP_n
 
 NUM_EPOCHS_PER_DECAY = 350.0      # Epochs after which learning rate decays.
 LEARNING_RATE_DECAY_FACTOR = 0.1  # Learning rate decay factor.
@@ -49,12 +53,29 @@ def _activation_summary(x):
   tensor_name = x.op.name
   tf.summary.histogram(tensor_name + '/activations', x)
   tf.summary.scalar(tensor_name + '/sparsity', tf.nn.zero_fraction(x))
-
-def _regularization(var):
-    """Return the regularization loss, typically the l1_norm"""
-    l1_norm = tf.reduce_sum(tf.abs(var))
-    return l1_norm    
-
+ 
+def _variable_with_regularization(name,shape,stddev,wd,method = "l2"):
+    """Create a variable with regularization which is initailized with truncated
+    normal initializer.
+    Args:
+        name: name of the variable
+        shape: shape of the variable, expect a list
+        stddev: standard deviation of initailization distribution
+        wd: weight decat cofficient.
+        method: regularization method used, typically l1,l2
+        
+    Returns:
+        Variable of tensor
+    """
+    var = tf.get_variable(name = name, shape = shape,dtype = tf.float32, initializer = tf.truncated_normal_initializer(stddev = stddev))
+    if wd:
+        if method == "l1":
+            regularization = tf.multiply(tf.reduce_sum(tf.abs(var)),wd,name = "weight_loss")
+        if method == "l2":
+            regularization = tf.multiply(tf.nn.l2_loss(var),wd,name = "weight_loss")
+        tf.add_to_collection('losses',regularization)
+    return var
+    
 def inference(SNP):
     """Build the deepGTA model here:
     Args:
@@ -62,11 +83,14 @@ def inference(SNP):
     Returns:
         trait_predict: Predicted Trait, 1D tensor of [batch_size]
     """
-    hidden1_units = 400
-    hidden2_units = 100   
+    
+    hidden1_units = 600
+    hidden2_units = 100
+    weight_decay = FLAGS.weight_decay
+    decay_method = FLAGS.decay_method
     with tf.variable_scope("hidden1"):
         #First Layer variable
-        w = tf.get_variable("weights",shape = [SNP_n,hidden1_units],dtype = tf.float32, initializer = tf.truncated_normal_initializer( stddev = 0.04))
+        w = _variable_with_regularization("weights",[SNP_n,hidden1_units],0.04,weight_decay,decay_method)
         b = tf.get_variable("bias",shape = [hidden1_units], dtype = tf.float32, initializer = tf.constant_initializer(0.01))
         #Operation
         z = tf.nn.bias_add(tf.matmul(SNP,w),b)
@@ -79,7 +103,7 @@ def inference(SNP):
     
     with tf.variable_scope("hidden2"):
         #Second Layer
-        w = tf.get_variable("weights",shape = [hidden1_units,hidden2_units],dtype = tf.float32, initializer = tf.truncated_normal_initializer(stddev = 0.04))
+        w = _variable_with_regularization("weights",[hidden1_units,hidden2_units],0.04,weight_decay,decay_method)
         b = tf.get_variable("bias",shape = [hidden2_units], dtype = tf.float32, initializer = tf.constant_initializer(0.01))
         #Operation
         z = tf.nn.bias_add(tf.matmul(hidden1_dropout,w),b)
@@ -91,11 +115,26 @@ def inference(SNP):
         _activation_summary(hidden2)
     
     with tf.variable_scope("softmax_linear"):
-        w = tf.get_variable("weights",shape = [hidden2_units,1],dtype = tf.float32,initializer = tf.truncated_normal_initializer(stddev = 0.04))
+        w = _variable_with_regularization("weights",[hidden2_units,1],0.04,weight_decay,decay_method)
         b = tf.get_variable("bias",shape = 1,dtype = tf.float32,initializer = tf.constant_initializer(0.1))
         
-        trait_predict = tf.nn.bias_add(tf.matmul(hidden2_dropout,w),b) 
+        trait_predict = tf.nn.bias_add(tf.matmul(hidden2_dropout,w),b)
+    
     return trait_predict
+def inference_linear(SNP):
+    """Build a linear model here:
+        Args:
+        SNP: tf.placeholder, from the deepGTA_input.placeholder_input(),shape = [batch_size,SNP_n]
+    Returns:
+        trait_predict: Predicted Trait, 1D tensor of [batch_size]
+    """
+    with tf.variable_scope("softmax_linear"):
+        w = _variable_with_regularization("weights",[SNP_n,1],0.01,FLAGS.weight_decay,FLAGS.decay_method)
+        b = tf.get_variable("bias",shape = 1,dtype = tf.float32,initializer = tf.constant_initializer(0.1))
+        trait_predict = tf.nn.bias_add(tf.matmul(SNP,w),b)
+    return trait_predict
+    
+    
 def loss(trait_predict,trait):
     """Calculate the loss:
     Args:
@@ -106,17 +145,12 @@ def loss(trait_predict,trait):
         loss: Loss with 1st norm regularization of weight
             
     """
-    #Get the weight
-    with tf.variable_scope("hidden1",reuse = True):
-        w1 = tf.get_variable("weights")
-    with tf.variable_scope("hidden2",reuse = True):
-        w2 = tf.get_variable("weights")
-    with tf.variable_scope("softmax_linear",reuse = True):
-        w = tf.get_variable("weights")
-    #Calculate the loss with 1st Norm Regularization of weight
-    weight_decay = tf.multiply(FLAGS.weight_decay,(_regularization(w1)+_regularization(w2)+_regularization(w)),name = "wieght_loss")
-    loss = tf.reduce_mean(tf.square(trait_predict-trait)) + weight_decay
-    return loss
+
+    #Calculate the loss 
+    loss = tf.reduce_mean(tf.square(trait_predict-trait))
+    tf.add_to_collection('losses',loss)
+    return tf.add_n(tf.get_collection('losses'),name = 'total_loss')
+
 def training(loss,global_step):
     """Training the model:
         Args:

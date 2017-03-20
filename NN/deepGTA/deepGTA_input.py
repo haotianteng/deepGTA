@@ -11,9 +11,12 @@ from __future__ import print_function
 
 import numpy as np, tensorflow as tf
 import collections,sys
+import plink_reader as reader
 from plink_reader import extract_trait,extract_SNP
+sys.path.append("/Users/haotian.teng/Documents/deepGTA/")
 sys.path.append("/Users/haotian.teng/Documents/deepGTA/NN/Simulation")
 import QTSim
+from util.mutual_info import calc_MI
 TRAIN_SNP = "/Users/haotian.teng/Documents/deepGTA/data/aric_hapmap3_m01_geno_ch22"
 TRAIN_TRAIT ="/Users/haotian.teng/Documents/deepGTA/data/aric_outlier_117_u8682.txt"
 TRAIT_NAME = "anta01"
@@ -22,11 +25,11 @@ FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_float(
       'jitter',
       default_value=None,
-      docstring='If true, add noise to the training data.'
+      docstring='If noe None, add noise to the training data.'
   )
 
 Datasets = collections.namedtuple('Datasets', ['train', 'validation', 'test'])
-SNP_n = 10000
+extract_SNP_n = 400 #Only extract the first $effect_SNP_n SNPs with highest MI score. 
 
 NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 5000
 NUM_EXAMPLES_PER_EPOCH_FOR_VALIDATION = 1000
@@ -120,13 +123,22 @@ class DataSet(object):
             trait_batch = trait_batch + noise
         return SNP_batch,trait_batch
             
+def sig_index(SNP,trait,sig_n):
+    bin_number = 5
+    MI_list = np.empty(0)
+    interval = (max(trait)-min(trait))/bin_number
+    trait_bin = np.arange(min(trait),max(trait)+interval/2,interval)
+    for index in range(SNP.shape[1]):
+        MI_list = np.append(MI_list,calc_MI(SNP[:,index],trait,binsY = trait_bin))
+    ind = sorted(range(len(MI_list)),key = lambda x: MI_list[x],reverse = True)[:sig_n]
+    return ind
         
 def read_data_sets(train_dir,
                    dummy_data = False
                    ):
     validation_size = NUM_EXAMPLES_PER_EPOCH_FOR_VALIDATION
     if dummy_data:
-        config = QTSim.make_config(sample_size = NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN,SNP_n = SNP_n)
+        config = QTSim.make_config(sample_size = NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN,SNP_n = 1000)
         def fake(config):
             return DataSet([],[],dummy_data = True,config = config)
         train = fake(config)
@@ -148,6 +160,8 @@ def read_data_sets(train_dir,
     train_SNP = train_SNP[~np.in1d(range(len(train_trait)),exclude_list)]
     train_trait = train_trait[~np.in1d(range(len(train_trait)),exclude_list)]
     train_trait = (train_trait - np.mean(train_trait))/np.std(train_trait)
+    extract_index = sig_index(train_SNP,train_trait,extract_SNP_n)
+    train_SNP = train_SNP[:,extract_index]
     #Seperate the dataset by validation size
     validation_SNP = train_SNP[:validation_size]
     validation_trait = train_trait[:validation_size]
@@ -155,6 +169,6 @@ def read_data_sets(train_dir,
     train_trait = train_trait[validation_size:]
     
     #Construct data set class
-    train = DataSet(train_SNP,train_trait,dummy_data = dummy_data)
-    validation = DataSet(validation_SNP,validation_trait,dummy_data = dummy_data)
+    train = DataSet(train_SNP,train_trait,dummy_data = False)
+    validation = DataSet(validation_SNP,validation_trait,dummy_data = False)
     return Datasets(train = train,validation = validation,test = validation)

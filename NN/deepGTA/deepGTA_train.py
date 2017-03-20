@@ -15,13 +15,13 @@ import time,os
 import deepGTA_input
 import deepGTA
 
-SNP_n = deepGTA_input.SNP_n
+SNP_n = deepGTA_input.extract_SNP_n
 
 FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_integer(
       'max_steps',
-      default_value=10000,
+      default_value=100000,
       docstring='Number of steps to run trainer.'
   )
 

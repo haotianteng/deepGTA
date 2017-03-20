@@ -7,6 +7,7 @@ Created on Fri Mar 10 17:17:30 2017
 """
 import math,os
 import numpy as np
+SNP_max = 100000
 
 def extract_SNP(file_path,chrom_list = None):
     """Extract the SNP into a 2D numpy array [individual_n, SNP_n]
@@ -43,7 +44,7 @@ def extract_SNP(file_path,chrom_list = None):
     magic_num = [format(x,'b') for x in magic_num]
     if not (magic_num[0] == "1101100") & (magic_num[1] == "11011") & (magic_num[2] == "1"):
         print ("File format does not support, magic number is not correct.")
-    for SNP_index in range(min(10000,SNP_n)):
+    for SNP_index in range(min(SNP_max,SNP_n)):
         if (SNP_index_list is None) or (SNP_index in SNP_index_list):
             SNP = np.empty(0)
             block = os.read(bed_f,block_size)
