@@ -13,7 +13,7 @@ import deepGTA_input
 FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_integer(
       'batch_size',
-      default_value=500,
+      default_value=200,
       docstring='Batch size.  Must divide evenly into the dataset sizes.'
   )
 
@@ -84,8 +84,8 @@ def inference(SNP):
         trait_predict: Predicted Trait, 1D tensor of [batch_size]
     """
     
-    hidden1_units = 600
-    hidden2_units = 100
+    hidden1_units = 1
+    hidden2_units = 1
     weight_decay = FLAGS.weight_decay
     decay_method = FLAGS.decay_method
     with tf.variable_scope("hidden1"):

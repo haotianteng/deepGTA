@@ -139,7 +139,7 @@ def run_training():
     
     for i in range(FLAGS.max_steps):
         start_time = time.time()
-        feed_dict = fill_feed_dict(data_sets.train,SNP_placeholder,trait_placeholder)
+        feed_dict = fill_feed_dict(data_sets.train,SNP_placeholder,trait_placeholder,shuffle = False)
         _,loss_val,eval_loss_val = sess.run([train_step,loss,eval_loss],feed_dict = feed_dict)
         duration = time.time() - start_time              
         if i%100==0:

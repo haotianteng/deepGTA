@@ -29,11 +29,11 @@ tf.app.flags.DEFINE_float(
   )
 
 Datasets = collections.namedtuple('Datasets', ['train', 'validation', 'test'])
-extract_SNP_n = 400 #Only extract the first $effect_SNP_n SNPs with highest MI score. 
+extract_SNP_n = 200 #Only extract the first $effect_SNP_n SNPs with highest MI score. 
 
 NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 5000
-NUM_EXAMPLES_PER_EPOCH_FOR_VALIDATION = 1000
-NUM_EXAMPLES_FOR_TEST = 1000
+NUM_EXAMPLES_PER_EPOCH_FOR_VALIDATION = 500
+NUM_EXAMPLES_FOR_TEST = 500
 
 
 class DataSet(object):
