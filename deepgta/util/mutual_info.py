@@ -7,11 +7,6 @@ Created on Wed Mar 15 17:14:46 2017
 """
 
 import numpy as np,sys
-#"""import module for test"""
-#sys.path.append("/Users/haotian.teng/Documents/deepGTA/NN/Simulation/")
-#import QTSim
-#from basic import exclude
-#import matplotlib.pyplot as plt
 
 def calc_MI(X,Y,binsX = None,binsY = None):
     c_X,_ = calc_hist(X,binsX)
@@ -65,31 +60,48 @@ def shan_entropy(c):
     H = -sum(c_normalized* np.log2(c_normalized))  
     return H
 
-#"""test code"""
-#for bin_number in range(2,10):
-#    config = QTSim.make_config()
-#    SNP,trait = QTSim.run_sim(config,keep_record_in = None)
-#    MI_list = np.empty(0)
-#    interval = (max(trait)-min(trait))/bin_number
-#    trait_bin = np.arange(min(trait),max(trait)+interval/2,interval)
-#    for index in range(SNP.shape[1]):
-#        MI_list = np.append(MI_list,calc_MI(SNP[:,index],trait,binsY = trait_bin)) 
-#    MI_list_effect = exclude(MI_list, config.index)
-#    effect_correlation = np.corrcoef(MI_list[config.index],abs(config.effect_size))[0,1]
-#    false_pos = np.sum(np.abs(MI_list_effect))
-#    print("Correlation %4.2f"%(effect_correlation))
-#    print("False positive: %4.2f"%(false_pos))
-#    print("Bin number: %d"%bin_number)
-#    print("++++++++++++++++++++++++++++")
+def test():
+    #"""import module for test"""
+    sys.path.append("/Users/haotian.teng/Documents/deepgta/deepgta/nn/simulation/")
+    import qt_sim
+    from basic import exclude
+    import matplotlib.pyplot as plt
+    """test code"""
+#    for bin_number in range(2,10):
+#        config = qt_sim.make_config()
+#        SNP,trait = qt_sim.run_sim(config,keep_record_in = None)
+#        MI_list = np.empty(0)
+#        interval = (max(trait)-min(trait))/bin_number
+#        trait_bin = np.arange(min(trait),max(trait)+interval/2,interval)
+#        for index in range(SNP.shape[1]):
+#            MI_list = np.append(MI_list,calc_MI(SNP[:,index],trait,binsY = trait_bin)) 
+#        MI_list_effect = exclude(MI_list, config.index)
+#        effect_correlation = np.corrcoef(MI_list[config.index],abs(config.effect_size))[0,1]
+#        false_pos = np.sum(np.abs(MI_list_effect))
+#        print("Correlation %4.2f"%(effect_correlation))
+#        print("False positive: %4.2f"%(false_pos))
+#        print("Bin number: %d"%bin_number)
+#        print("++++++++++++++++++++++++++++")
+    
+    """Null distribution test"""
+    bin_number = 5
+    sig_value_list = list()
+    samplesize = 10000
+#    for samplesize in range(10000,30000,10000):
+    config = qt_sim.make_config(sample_size = samplesize,effectSNP_n = 1)
+    SNP,trait = qt_sim.run_sim(config,keep_record_in = None)
+    MI_list = np.empty(0)
+    interval = (max(trait)-min(trait))/bin_number
+    trait_bin = np.arange(min(trait),max(trait)+interval/2,interval)
+    for index in range(SNP.shape[1]):
+        MI_list = np.append(MI_list,calc_MI(SNP[:,index],trait,binsY = trait_bin))
+    MI_list_exclude = exclude(MI_list, config.index)
+    sig_n = int(len(MI_list_exclude)*0.05)
+    sort_index = sorted(range(len(MI_list_exclude)),key = lambda x:MI_list_exclude[x],reverse = True)
+    sig_value = MI_list_exclude[sort_index[sig_n-1]]
+    plt.hist(MI_list_exclude)
+    sig_value_list.append(sig_value)
+    print("Sample size : %d, significant value: %5.5f)"%(samplesize,sig_value))
 
-#"""Null distribution test"""
-#bin_number = 5
-#config = QTSim.make_config(sample_size = 100000)
-#SNP,trait = QTSim.run_sim(config,keep_record_in = None)
-#MI_list = np.empty(0)
-#interval = (max(trait)-min(trait))/bin_number
-#trait_bin = np.arange(min(trait),max(trait)+interval/2,interval)
-#for index in range(SNP.shape[1]):
-#    MI_list = np.append(MI_list,calc_MI(SNP[:,index],trait,binsY = trait_bin))
-#MI_list_exclude = exclude(MI_list, config.index)
-#plt.hist(MI_list_exclude)
+if __name__=="__main__":
+    test()

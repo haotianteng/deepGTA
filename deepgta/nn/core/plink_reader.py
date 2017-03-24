@@ -5,9 +5,9 @@ Created on Fri Mar 10 17:17:30 2017
 
 @author: haotian.teng
 """
-import math,os
+import math,os,sys
 import numpy as np
-SNP_max = 100000
+SNP_max = float("inf")
 
 def extract_SNP(file_path,chrom_list = None):
     """Extract the SNP into a 2D numpy array [individual_n, SNP_n]
@@ -38,12 +38,13 @@ def extract_SNP(file_path,chrom_list = None):
     SNP_index_list = None
     if chrom_list is not None:
         SNP_index_list = [i for i, x in enumerate(chrom_record) if x in chrom_list]
-    block_size = int(math.ceil(sample_size / 4))
+    block_size = int(math.ceil(sample_size / 4.0))
     bed_f = os.open(bed_file_path,os.O_RDONLY)
     magic_num = os.read(bed_f,3)
     magic_num = [bin(ord(x))[2:] for x in magic_num]
     if not (magic_num[0] == "1101100") & (magic_num[1] == "11011") & (magic_num[2] == "1"):
         print ("File format does not support, magic number is not correct.")
+    print("SNP reading begin...")
     for SNP_index in range(min(SNP_max,SNP_n)):
         if (SNP_index_list is None) or (SNP_index in SNP_index_list):
             SNP = np.empty(0)
@@ -52,6 +53,9 @@ def extract_SNP(file_path,chrom_list = None):
             for byte_string in byte_list:
                 SNP  = np.concatenate( (SNP,byte2SNP(byte_string)) )
             SNP_list.append(SNP)
+        if SNP_index%100 == 0:
+            sys.stdout.write("%d/%d SNP read.   \r" % (SNP_index,min(SNP_max,SNP_n) ))
+            sys.stdout.flush()
     SNP_data = np.stack(SNP_list,axis = -1)
     return SNP_data[:sample_size]
 
@@ -62,7 +66,6 @@ def extract_trait(file_path,trait_name):
         trait_name: trait name which need to be extracted, must be a single string.
     Returns:
         trait_data: numpy triat array to address the phenotype
-        
     """
     trait_list = list()
     g = lambda x: [float(x)] if x!='NA' else [float('nan')]
@@ -102,7 +105,9 @@ def bit2SNP(bit):
     elif bit =='11':
         return 2
 
-        
-    
-#SNP_record = extract_SNP("/Users/haotian.teng/Documents/deepgta/data/aric_hapmap3_m01_geno",chrom_list = [1])
-#trait_record =extract_trait("/Users/haotian.teng/Documents/deepgta/data/aric_outlier_117_u8682.txt",trait_name = 'anta01')
+def test():
+    SNP_record = extract_SNP("/Users/haotian.teng/Documents/deepgta/data/aric_hapmap3_m01_geno_ch22")
+    trait_record =extract_trait("/Users/haotian.teng/Documents/deepgta/data/aric_outlier_117_u8682.txt",trait_name = 'anta01')
+
+if __name__=="__main__":
+    test()

@@ -9,7 +9,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import tensorflow as tf
+import tensorflow as tf,numpy as np
 import time,os
 import deepgta_input
 import deepgta_model
@@ -23,7 +23,7 @@ FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_integer(
       'max_steps',
-      default_value=100000,
+      default_value=3000,
       docstring='Number of steps to run trainer.'
   )
 
@@ -146,8 +146,9 @@ def run_training():
     if not os.path.exists(FLAGS.log_dir+'/summary'):
         os.makedirs(FLAGS.log_dir+'/summary')
     summary_writer = tf.summary.FileWriter(FLAGS.log_dir+'/summary', sess.graph)
-    
+    max_R_score = -float("inf");
     for i in range(FLAGS.max_steps):
+       
         start_time = time.time()
         feed_dict = fill_feed_dict(data_sets.train,SNP_placeholder,trait_placeholder,shuffle = False)
         _,loss_val,eval_loss_val = sess.run([train_step,loss,eval_loss],feed_dict = feed_dict)
@@ -161,8 +162,6 @@ def run_training():
         if (i + 1) % 1000 == 0 or (i + 1) == FLAGS.max_steps:
             if not os.path.exists(FLAGS.log_dir+'/model'):
                 os.makedirs(FLAGS.log_dir+'/model')
-            checkpoint_file = os.path.join(FLAGS.log_dir+'/model', 'model.ckpt')
-            saver.save(sess, checkpoint_file, global_step=i)
             # Evaluate against the training set.
             print('Training Data Eval:')
             R_squared_train = run_once(sess,
@@ -187,7 +186,10 @@ def run_training():
                     SNP_placeholder,
                     trait_placeholder,
                     data_sets.test)
-        
+            if R_squared_validation>=max_R_score:
+                max_R_score = max(R_squared_validation,max_R_score)
+                checkpoint_file = os.path.join(FLAGS.log_dir+'/model', 'model.ckpt')
+                saver.save(sess, checkpoint_file, global_step=i)
     return R_squared_train,R_squared_validation,R_squared_test
         
 def main(_):
@@ -199,8 +201,6 @@ def main(_):
         raise ValueError("Must set --trait_name to the expecting trait name.")
     R1,R2,R3 = run_training()
     R = [R1,R2,R3]
-    if not os.path.exists(FLAGS.record_file):
-        os.makedirs(FLAGS.record_file)
     with open(FLAGS.record_file,'w+') as f:
         f.write(','.join(str(r) for r in R)+'\n')
     
